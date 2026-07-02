@@ -6,9 +6,9 @@ import java.util.List;
 public interface StaffRepo {
     StaffUser findById(int id);
     List<StaffUser> findAll();
-    void save(StaffUser staff);
-    void update(StaffUser staff);
-    void delete(int id);
+    public abstract void save(StaffUser staff);
+    public abstract void update(StaffUser staff);
+    public abstract void delete(int id);
 
     StaffUser findByUsername(String username);
 }

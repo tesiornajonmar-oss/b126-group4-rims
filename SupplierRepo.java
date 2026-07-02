@@ -6,7 +6,7 @@ import java.util.List;
 public interface SupplierRepo {
     Supplier findById(int id);
     List<Supplier> findAll();
-    void save(Supplier supplier);
-    void update(Supplier supplier);
-    void delete(int id);
+    public abstract void save(Supplier supplier);
+    public abstract void update(Supplier supplier);
+    public abstract void delete(int id);
 }

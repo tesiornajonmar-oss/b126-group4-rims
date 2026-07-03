@@ -7,7 +7,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class IngredientRepoImpl implements IngredientRepo {
     private final Connection connection;
@@ -20,7 +22,7 @@ public class IngredientRepoImpl implements IngredientRepo {
     public Ingredient findById(int id) {
         String query = "SELECT * FROM ingredients WHERE ingredient_id=?";
         try (PreparedStatement stmnt = connection.prepareStatement(query)) {
-        	stmnt.setInt(1, id);
+            stmnt.setInt(1, id);
             ResultSet rs = stmnt.executeQuery();
             if (rs.next()) return mapRow(rs);
         } catch (SQLException e) { e.printStackTrace(); }
@@ -69,8 +71,8 @@ public class IngredientRepoImpl implements IngredientRepo {
     public void delete(int id) {
         String query = "DELETE FROM ingredients WHERE ingredient_id=?";
         try (PreparedStatement stmnt = connection.prepareStatement(query)) {
-        	stmnt.setInt(1, id);
-        	stmnt.executeUpdate();
+            stmnt.setInt(1, id);
+            stmnt.executeUpdate();
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
@@ -79,7 +81,7 @@ public class IngredientRepoImpl implements IngredientRepo {
         List<Ingredient> ingredients = new ArrayList<>();
         String query = "SELECT * FROM ingredients WHERE supplier_id=?";
         try (PreparedStatement stmnt = connection.prepareStatement(query)) {
-        	stmnt.setInt(1, supplierId);
+            stmnt.setInt(1, supplierId);
             ResultSet rs = stmnt.executeQuery();
             while (rs.next()) ingredients.add(mapRow(rs));
         } catch (SQLException e) { e.printStackTrace(); }
@@ -95,6 +97,49 @@ public class IngredientRepoImpl implements IngredientRepo {
             while (rs.next()) ingredients.add(mapRow(rs));
         } catch (SQLException e) { e.printStackTrace(); }
         return ingredients;
+    }
+
+    public List<Map<String, Object>> findIngredientsWithSupplier() {
+        List<Map<String, Object>> results = new ArrayList<>();
+        String query = "SELECT i.ingredient_id, i.ingredient_name, i.stock_quantity, i.unit, i.reorder_level, " +
+                       "s.supplier_id, s.supplier_name " +
+                       "FROM ingredients i " +
+                       "JOIN suppliers s ON i.supplier_id = s.supplier_id";
+        try (Statement stmnt = connection.createStatement();
+             ResultSet rs = stmnt.executeQuery(query)) {
+            while (rs.next()) {
+                Map<String, Object> row = new HashMap<>();
+                row.put("ingredientId", rs.getInt("ingredient_id"));
+                row.put("ingredientName", rs.getString("ingredient_name"));
+                row.put("stockQuantity", rs.getInt("stock_quantity"));
+                row.put("unit", rs.getString("unit"));
+                row.put("reorderLevel", rs.getInt("reorder_level"));
+                row.put("supplierId", rs.getInt("supplier_id"));
+                row.put("supplierName", rs.getString("supplier_name"));
+                results.add(row);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return results;
+    }
+
+    public List<Map<String, Object>> findIngredientsUsedInRecipes() {
+        List<Map<String, Object>> results = new ArrayList<>();
+        String query = "SELECT i.ingredient_id, i.ingredient_name, r.recipe_id, r.menu_id, r.quantity_needed " +
+                       "FROM ingredients i " +
+                       "JOIN recipe_ingredients r ON i.ingredient_id = r.ingredient_id";
+        try (Statement stmnt = connection.createStatement();
+             ResultSet rs = stmnt.executeQuery(query)) {
+            while (rs.next()) {
+                Map<String, Object> row = new HashMap<>();
+                row.put("ingredientId", rs.getInt("ingredient_id"));
+                row.put("ingredientName", rs.getString("ingredient_name"));
+                row.put("recipeId", rs.getInt("recipe_id"));
+                row.put("menuId", rs.getInt("menu_id"));
+                row.put("quantityNeeded", rs.getDouble("quantity_needed"));
+                results.add(row);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return results;
     }
 
     private Ingredient mapRow(ResultSet rs) throws SQLException {

@@ -7,7 +7,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MenuItemRepoImpl implements MenuItemRepo {
     private final Connection connection;
@@ -20,7 +22,7 @@ public class MenuItemRepoImpl implements MenuItemRepo {
     public MenuItem findById(int id) {
         String query = "SELECT * FROM menu_items WHERE menu_id=?";
         try (PreparedStatement stmnt = connection.prepareStatement(query)) {
-        	stmnt.setInt(1, id);
+            stmnt.setInt(1, id);
             ResultSet rs = stmnt.executeQuery();
             if (rs.next()) return mapRow(rs);
         } catch (SQLException e) { e.printStackTrace(); }
@@ -77,7 +79,7 @@ public class MenuItemRepoImpl implements MenuItemRepo {
         List<MenuItem> items = new ArrayList<>();
         String query = "SELECT * FROM menu_items WHERE category=?";
         try (PreparedStatement stmnt = connection.prepareStatement(query)) {
-        	stmnt.setString(1, category);
+            stmnt.setString(1, category);
             ResultSet rs = stmnt.executeQuery();
             while (rs.next()) items.add(mapRow(rs));
         } catch (SQLException e) { e.printStackTrace(); }
@@ -89,11 +91,39 @@ public class MenuItemRepoImpl implements MenuItemRepo {
         List<MenuItem> items = new ArrayList<>();
         String query = "SELECT * FROM menu_items WHERE status=?";
         try (PreparedStatement stmnt = connection.prepareStatement(query)) {
-        	stmnt.setString(1, status);
+            stmnt.setString(1, status);
             ResultSet rs = stmnt.executeQuery();
             while (rs.next()) items.add(mapRow(rs));
         } catch (SQLException e) { e.printStackTrace(); }
         return items;
+    }
+
+    // JOIN: menu items with ingredients
+    public List<Map<String, Object>> findMenuItemsWithIngredients() {
+        List<Map<String, Object>> results = new ArrayList<>();
+        String query = "SELECT m.menu_id, m.menu_name, m.price, m.category, m.status, " +
+                       "r.recipe_id, r.quantity_needed, " +
+                       "i.ingredient_id, i.ingredient_name " +
+                       "FROM menu_items m " +
+                       "JOIN recipe_ingredients r ON m.menu_id = r.menu_id " +
+                       "JOIN ingredients i ON r.ingredient_id = i.ingredient_id";
+        try (Statement stmnt = connection.createStatement();
+             ResultSet rs = stmnt.executeQuery(query)) {
+            while (rs.next()) {
+                Map<String, Object> row = new HashMap<>();
+                row.put("menuId", rs.getInt("menu_id"));
+                row.put("menuName", rs.getString("menu_name"));
+                row.put("price", rs.getDouble("price"));
+                row.put("category", rs.getString("category"));
+                row.put("status", rs.getString("status"));
+                row.put("recipeId", rs.getInt("recipe_id"));
+                row.put("quantityNeeded", rs.getDouble("quantity_needed"));
+                row.put("ingredientId", rs.getInt("ingredient_id"));
+                row.put("ingredientName", rs.getString("ingredient_name"));
+                results.add(row);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return results;
     }
 
     private MenuItem mapRow(ResultSet rs) throws SQLException {

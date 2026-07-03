@@ -7,7 +7,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class RecipeIngredientRepoImpl implements RecipeIngredientRepo {
     private final Connection connection;
@@ -92,6 +94,29 @@ public class RecipeIngredientRepoImpl implements RecipeIngredientRepo {
             while (rs.next()) recipes.add(mapRow(rs));
         } catch (SQLException e) { e.printStackTrace(); }
         return recipes;
+    }
+
+    // JOIN: recipe ingredients with menu items and ingredients
+    public List<Map<String, Object>> findRecipeIngredientsWithDetails() {
+        List<Map<String, Object>> results = new ArrayList<>();
+        String query = "SELECT r.recipe_id, r.menu_id, r.quantity_needed, " +
+                       "m.menu_name, i.ingredient_name " +
+                       "FROM recipe_ingredients r " +
+                       "JOIN menu_items m ON r.menu_id = m.menu_id " +
+                       "JOIN ingredients i ON r.ingredient_id = i.ingredient_id";
+        try (Statement stmnt = connection.createStatement();
+             ResultSet rs = stmnt.executeQuery(query)) {
+            while (rs.next()) {
+                Map<String, Object> row = new HashMap<>();
+                row.put("recipeId", rs.getInt("recipe_id"));
+                row.put("menuId", rs.getInt("menu_id"));
+                row.put("menuName", rs.getString("menu_name"));
+                row.put("ingredientName", rs.getString("ingredient_name"));
+                row.put("quantityNeeded", rs.getDouble("quantity_needed"));
+                results.add(row);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return results;
     }
 
     private RecipeIngredient mapRow(ResultSet rs) throws SQLException {

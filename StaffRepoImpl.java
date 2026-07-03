@@ -7,7 +7,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import org.mindrot.jbcrypt.BCrypt;
+
 
 public class StaffRepoImpl implements StaffRepo {
     private final Connection connection;
@@ -41,9 +45,10 @@ public class StaffRepoImpl implements StaffRepo {
     @Override
     public void save(StaffUser staff) {
         String query = "INSERT INTO staff (username, password, full_name, role) VALUES (?, ?, ?, ?)";
+        String hashedPassword = BCrypt.hashpw(staff.getPassword(), BCrypt.gensalt());
         try (PreparedStatement stmnt = connection.prepareStatement(query)) {
             stmnt.setString(1, staff.getUserName());
-            stmnt.setString(2, staff.getPassword());
+            stmnt.setString(2, hashedPassword);
             stmnt.setString(3, staff.getFullName());
             stmnt.setString(4, staff.getRole());
             stmnt.executeUpdate();
@@ -81,6 +86,28 @@ public class StaffRepoImpl implements StaffRepo {
             if (rs.next()) return mapRow(rs);
         } catch (SQLException e) { e.printStackTrace(); }
         return null;
+    }
+
+    public List<Map<String, Object>> findStaffWithTransactions() {
+        List<Map<String, Object>> results = new ArrayList<>();
+        String query = "SELECT s.staff_id, s.full_name, s.role, " +
+                       "t.transaction_id, t.transaction_type, t.quantity " +
+                       "FROM staff s " +
+                       "JOIN inventory_transactions t ON s.staff_id = t.staff_id";
+        try (Statement stmnt = connection.createStatement();
+             ResultSet rs = stmnt.executeQuery(query)) {
+            while (rs.next()) {
+                Map<String, Object> row = new HashMap<>();
+                row.put("staffId", rs.getInt("staff_id"));
+                row.put("fullName", rs.getString("full_name"));
+                row.put("role", rs.getString("role"));
+                row.put("transactionId", rs.getInt("transaction_id"));
+                row.put("transactionType", rs.getString("transaction_type"));
+                row.put("quantity", rs.getInt("quantity"));
+                results.add(row);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return results;
     }
 
     private StaffUser mapRow(ResultSet rs) throws SQLException {
